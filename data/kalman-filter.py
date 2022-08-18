@@ -25,6 +25,9 @@ dt = time[1:] - time[0:-1]
 dt = np.append(dt, 0)
 # print(len(dt))
 
+robot_max_speed_estimate = 10 # let's assume the robot can't move faster than \
+# 10 ms -> would probably be better do do this based off acceleration too
+
 # v_est = gradient(distance, time)
 
 motion_modeled, motion_model_noise = motion_model(index, velocity_command, time)
@@ -68,7 +71,7 @@ print(params_sonar2)
 
 length = len(index)
 K = zeros(length)
-var_W = motion_model_noise # determined previously, probably wrong
+var_W = motion_model_noise*1000 # determined previously, probably wrong
 Xir1 = zeros(length)
 Xir2 = zeros(length)
 Xir3 = zeros(length)
@@ -130,13 +133,24 @@ for n in index[0:]:
 
     # potentially experiment with some outlier rejection here?
     Xsonar1[n] = inv_linear_model(sonar1[n], params_sonar1[0], params_sonar1[1])
-
-    # print(f'Xsonar1 = {Xsonar1[n]}')
-
     Xsonar2[n] = inv_linear_model(sonar2[n], params_sonar2[0], params_sonar2[1])
 
+
+    furthest_possible_move = robot_max_speed_estimate * dt[n]
+    print(f'robot could not have moved further than {furthest_possible_move}')
+
+    if abs(Xsonar1[n] - x_hat_post[n-1]) > furthest_possible_move:
+        print('it ran')
+        print(f'n: {n}')
+        Xsonar1[n] = x_hat_post[n-1]
+
+    if abs(Xsonar2[n] - x_hat_post[n-1]) > furthest_possible_move:
+        print('it ran')
+        print(f'n: {n}')
+        Xsonar2[n] = x_hat_post[n-1]
+
+
     # fuse the sensors here
-    # X_hat[n] = Xsonar2[n]
     weight_sonar1[n] = 1 / var_sonar1
     weight_sonar2[n] = 1 / var_sonar2
 
@@ -156,27 +170,35 @@ for n in index[0:]:
 # kalman gain broken
 
 fig = figure()
-# plot(time, distance, label='distance')
+plot(time, distance, label='distance')
 # plot(time, Xir1, label='Xir1')
 # plot(time, Xir2, label='Xir2')
 # plot(time, Xir3, label='Xir3')
-plot(time, Xsonar1, label='Xsonar1')
-plot(time, Xsonar2, label='Xsonar2')
+# plot(time, Xsonar1, label='Xsonar1')
+# plot(time, Xsonar2, label='Xsonar2')
 # plot(time, x_hat_blue, label='x hat BLUE')
 plot(time, x_hat, label='fused sensor estimate')
 plot(time, x_hat_prior, label='motion model')
 plot(time, x_hat_post, label='final position estimate')
-plot(time, K, label='kalman gain')
+# plot(time, K, label='kalman gain')
 fig.legend()
 
-fig2 = figure()
-plot(time, var_x_hat_prior, label='var x hat prior')
-plot(time, var_x_hat, label='var x hat')
-plot(time, var_x_hat_post, label='var x hat post')
-plot(time, weight_sonar1, label='sonar 1 weight')
-plot(time, weight_sonar2, label='sonar 2 weight')
-plot(time, K, label='kalman gain')
-fig2.legend()
+# fig2 = figure()
+# plot(time, var_x_hat_prior, label='var x hat prior')
+# plot(time, var_x_hat, label='var x hat')
+# plot(time, var_x_hat_post, label='var x hat post')
+# plot(time, weight_sonar1, label='sonar 1 weight')
+# plot(time, weight_sonar2, label='sonar 2 weight')
+# plot(time, K, label='kalman gain')
+# fig2.legend()
+
+# fig3 = figure()
+# plot(time, sonar1, label='sonar1')
+# plot(time, sonar2, label='sonar2')
+# plot(time, Xsonar1, label='Xsonar1')
+# plot(time, Xsonar2, label='Xsonar2')
+# fig3.legend()
+
 show()
 # 1. predict the robot's position using the previous estimated position and your motion model
 
