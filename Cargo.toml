@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 plotters = "0.3.2"
 csv = "1.1"
+fast-float = "0.2"
