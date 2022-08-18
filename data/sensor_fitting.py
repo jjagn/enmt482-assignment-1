@@ -93,16 +93,43 @@ def fit_sensor(sensor='ir1', model=linear_model, standard_deviations=3, plot=Fal
     print(f'sensor: {sensor}')
 
     iterate = True
-    while iterate:
-    params, cov = curve_fit(model, distance, z)
+    stds = 4
+    while stds >= 2:
+        print(f'standard deviations: {stds}')
+        params, cov = curve_fit(model, distance, z)
+
+        zfit = model(distance, *params)
+        z_error = z - zfit
+
+        var_V = variance(z_error)
+        std_V = stdev(z_error)
+        print(f'sensor variance: {var_V}')
+        print(f'sensor std: {std_V}')
+        mean_V = mean(z_error)
+        print(f'sensor noise mean = {mean_V}')
+
+        max_allowable_error = std_V * stds
+        print(f'maximum allowable error: {max_allowable_error}')
+
+        # removing outliers
+        m = abs(z - zfit) < max_allowable_error
+        distance = distance[m]
+        z = z[m]
+
+        stds -= 0.25
 
     zfit = model(distance, *params)
     z_error = z - zfit
+    var_V = variance(z_error)
+    std_V = stdev(z_error)
+    print(f'sensor variance: {var_V}')
+    print(f'sensor std: {std_V}')
+    mean_V = mean(z_error)
+    print(f'sensor noise mean = {mean_V}')
 
-    # print(distance)
     if plot:
         fig, axes = subplots(1, 2)
-        fig.suptitle("curve fit")
+        fig.suptitle(f'curve fit, sensor: {sensor}')
 
         axes[0].plot(distance, zfit, '.', alpha=0.2, label='fit')
 
@@ -113,67 +140,22 @@ def fit_sensor(sensor='ir1', model=linear_model, standard_deviations=3, plot=Fal
         axes[1].plot(distance, z_error, '.', alpha=0.2)
         axes[1].set_title("error")
 
-        fig2, axes2 = subplots(1, 2)
+        # fig2, axes2 = subplots(1, 2)
+        # fig2.suptitle(f'corrected fit, sensor: {sensor}')
+
+        # axes2[0].plot(distance, zfit, '.', alpha=0.2)
+
+        # axes2[0].plot(distance, z, '.', alpha=0.2)
+        # axes2[0].set_title("original + fitted")
+        # axes2[0].legend()
         show()
 
-    var_V = variance(z_error)
-    std_V = stdev(z_error)
-    print(f'sensor variance: {var_V}')
-    print(f'sensor std: {std_V}')
-    mean_V = mean(z_error)
-    print(f'sensor noise mean = {mean_V}')
+    # if plot:
+    #     axes2[1].plot(distance, z_error, '.', alpha=0.2)
+    #     axes2[1].set_title("error")
+    #     show()
 
-    max_allowable_error = std_V * standard_deviations
-    print(f'maximum allowable error: {max_allowable_error}')
-
-    # removing outliers
-    m = abs(z - zfit) < max_allowable_error
-    distance = distance[m]
-    z = z[m]
-
-    # for i in range(0, len(distance)):
-    #     err = z[i] - zfit[i]
-    #     if abs(err) < max_allowable_error:
-    #         measurements_trimmed.append(z[i])
-    #         distances_trimmed.append(distance[i])
-
-    # measurements_trimmed = np.asarray(measurements_trimmed)
-    # distances_trimmed = np.asarray(distances_trimmed)
-    # print(measurements_trimmed)
-    # print(distances_trimmed)
-
-    params, cov_new =\
-            curve_fit(model, distance, z)
-
-    print(f'new parameters: {params}')
-
-    zfit = model(distance, *params)
-
-    # distance = distances_trimmed
-    # z = measurements_trimmed
-
-    if plot:
-        fig2.suptitle("corrected fit")
-
-        axes2[0].plot(distance, zfit, '.', alpha=0.2)
-
-        axes2[0].plot(distance, z, '.', alpha=0.2)
-        axes2[0].set_title("original + fitted")
-        axes[0].legend()
-
-    z_error = z - zfit
-    var_V = variance(z_error)
-    std_V = stdev(z_error)
-    print(f'sensor variance: {var_V}')
-    print(f'sensor std: {std_V}')
-    mean_V = mean(z_error)
-    print(f'sensor noise mean = {mean_V}')
-
-    if plot:
-        axes2[1].plot(distance, z_error, '.', alpha=0.2)
-        axes2[1].set_title("error")
-
-        show()
+        
     return(var_V, std_V, params)
 
 def main():
@@ -193,7 +175,7 @@ def main():
     print(std_ir3)
     print(params_ir3)
 
-    var_ir4, std_ir4, params_ir4 = fit_sensor('ir4', cubic_model, 1, do_plot)
+    var_ir4, std_ir4, params_ir4 = fit_sensor('ir4', ir4_model, 1, do_plot)
     print(var_ir4)
     print(std_ir4)
     print(params_ir4)
@@ -207,5 +189,3 @@ def main():
     print(var_sonar2)
     print(std_sonar2)
     print(params_sonar2)
-
-main()
